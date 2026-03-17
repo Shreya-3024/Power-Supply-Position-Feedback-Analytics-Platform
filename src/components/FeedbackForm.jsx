@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Star } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 import { toast } from 'sonner';
 
 const FeedbackForm = ({ onSuccess }) => {
@@ -111,7 +112,7 @@ const FeedbackForm = ({ onSuccess }) => {
         formData.append('photos', file);
       });
 
-      const response = await fetch('http://localhost:5000/api/feedback', {
+      const response = await fetch(`${API_BASE_URL}/feedback`, {
         method: 'POST',
         body: formData,
         headers: {

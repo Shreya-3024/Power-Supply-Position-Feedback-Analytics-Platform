@@ -5,14 +5,13 @@ import { Footer } from './components/Footer';
 import { LandingPage } from './components/LandingPage';
 import { Dashboard } from './components/Dashboard';
 import { SubmitReviewEnhanced } from './components/SubmitReviewEnhanced';
-import { TrackStatus } from './components/TrackStatus';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
 import FeedbackForm from './components/FeedbackForm';
 import AdminDashboard from './components/AdminDashboard';
-import AdminLoginNew from './components/AdminLoginNew';
+import { AdminLogin } from './components/AdminLogin';
 import { motion, AnimatePresence } from 'motion/react';
 import { Toaster } from './components/ui/sonner';
 
@@ -129,7 +128,7 @@ export default function App() {
             <Route 
               path="/admin-login" 
               element={
-                isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <AdminLoginNew />
+                isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <AdminLogin />
               } 
             />
 
@@ -147,14 +146,6 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <SubmitReviewEnhanced isDarkMode={isDarkMode} />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/track-status" 
-              element={
-                <ProtectedRoute>
-                  <TrackStatus isDarkMode={isDarkMode} />
                 </ProtectedRoute>
               } 
             />

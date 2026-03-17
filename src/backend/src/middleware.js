@@ -78,7 +78,10 @@ export const authenticate = async (req, res, next) => {
 // ==================== AUTHORIZATION MIDDLEWARE ====================
 export const authorize = (...roles) => {
   return (req, res, next) => {
+    console.log('[Authorize] Checking - User role:', req.user?.role, 'Required roles:', roles);
+    
     if (!req.user) {
+      console.log('[Authorize] FAILED - No user attached to request');
       return errorResponse(
         res,
         'Authentication required.',
@@ -87,13 +90,15 @@ export const authorize = (...roles) => {
     }
 
     if (!roles.includes(req.user.role)) {
+      console.log('[Authorize] FAILED - User role not in required roles. User role:', req.user.role);
       return errorResponse(
         res,
-        'You do not have permission to perform this action.',
+        `You do not have permission to perform this action. Your role: ${req.user.role}`,
         HTTP_STATUS.FORBIDDEN
       );
     }
 
+    console.log('[Authorize] ✅ PASSED for role:', req.user.role);
     next();
   };
 };

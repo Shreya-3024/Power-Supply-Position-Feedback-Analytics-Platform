@@ -24,7 +24,7 @@ const feedbackSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'In Progress', 'Resolved', 'Rejected', 'pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
   
@@ -163,15 +163,31 @@ feedbackSchema.virtual('timeElapsed').get(function () {
   return Date.now() - this.createdAt;
 });
 
-// Pre-validate middleware to generate complaint ID
-feedbackSchema.pre('validate', async function (next) {
-  if (!this.complaintId) {
-    const count = await mongoose.model('Feedback').countDocuments();
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const sequence = String(count + 1).padStart(5, '0');
-    this.complaintId = `PS${year}${month}${sequence}`;
+// Pre-save middleware to generate complaint ID only once
+feedbackSchema.pre('save', async function (next) {
+  // Only generate complaintId if it doesn't already exist
+  if (!this.complaintId && this.isNew) {
+    try {
+      // Use findOne with sort for better performance than countDocuments
+      const lastRecord = await mongoose.model('Feedback')
+        .findOne({}, {}, { sort: { 'createdAt': -1 } })
+        .lean();
+      
+      let sequenceNumber = 1;
+      if (lastRecord && lastRecord.complaintId) {
+        const lastNumber = parseInt(lastRecord.complaintId.slice(-5));
+        sequenceNumber = lastNumber + 1;
+      }
+      
+      const date = new Date();
+      const year = date.getFullYear().toString().slice(-2);
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const sequence = String(sequenceNumber).padStart(5, '0');
+      this.complaintId = `PS${year}${month}${sequence}`;
+    } catch (error) {
+      console.error('Error generating complaintId:', error);
+      // Continue without complaintId if there's an error
+    }
   }
   next();
 });

@@ -2,28 +2,23 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Zap, Star, Award, CheckCircle, Send, Sparkles } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
-import { api } from '../utils/api';
+import { API_BASE_URL } from '../config';
 
 export function SubmitReviewEnhanced({ isDarkMode = true }) {
   const [formData, setFormData] = useState({
-    brand: '',
-    model: '',
-    wattage: '',
-    efficiency: '',
-    modular: '',
-    price: '',
-    purchaseDate: '',
-    usageDuration: '',
-    rating: 5,
-    performance: 5,
-    noise: 5,
-    value: 5,
-    buildQuality: 5,
-    title: '',
-    review: '',
-    pros: '',
-    cons: '',
-    recommend: 'yes',
+    // PSU Feedback specific fields
+    case: '',
+    psuModel: '',
+    placement: 'horizontal',
+    fanDirection: 'intake',
+    temperature: '',
+    noiseLevel: '',
+    installation: '',
+    recommend: false,
+    notes: '',
+    problems: [],
+    
+    // Contact info
     name: '',
     email: ''
   });
@@ -45,81 +40,54 @@ export function SubmitReviewEnhanced({ isDarkMode = true }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation
+    if (!formData.case || !formData.psuModel || !formData.placement || !formData.temperature || !formData.noiseLevel || formData.installation === '') {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
     const id = `PSU-${Date.now().toString().slice(-8)}`;
     setTrackingId(id);
 
-    const newReview = {
-      ...formData,
-      id,
-      status: 'Pending Review',
-      submittedDate: new Date().toISOString(),
-      lastUpdated: new Date().toISOString()
-    };
-
-    // Save to localStorage (for offline access)
-    const existingReviews = JSON.parse(localStorage.getItem('psuReviews') || '[]');
-    existingReviews.push(newReview);
-    localStorage.setItem('psuReviews', JSON.stringify(existingReviews));
-
-    // Send to MongoDB backend
     try {
-      // Generate a valid 10-digit phone number from email or use a default
-      const phoneFromEmail = formData.email?.replace(/[^0-9]/g, '').slice(-10) || '9876543210';
-      const phone = phoneFromEmail.length === 10 ? phoneFromEmail : '9876543210';
-
-      // Format description to include all review details since backend Feedback model is strict
-      const description = `
-PSU Review: ${formData.title}
-
-Product Details:
-Brand: ${formData.brand}
-Model: ${formData.model}
-Wattage: ${formData.wattage}
-Efficiency: ${formData.efficiency}
-Modular: ${formData.modular}
-Price: ${formData.price}
-
-Ratings:
-Overall: ${formData.rating}/5
-Performance: ${formData.performance}/5
-Noise: ${formData.noise}/5
-Value: ${formData.value}/5
-Build Quality: ${formData.buildQuality}/5
-
-Review:
-${formData.review}
-
-Pros: ${formData.pros}
-Cons: ${formData.cons}
-Recommendation: ${formData.recommend}
-      `.trim();
-
+      // Prepare payload matching backend Feedback schema
       const payload = {
+        case: formData.case,
+        psuModel: formData.psuModel,
+        placement: formData.placement,
+        fanDirection: formData.fanDirection,
+        temperature: parseInt(formData.temperature),
+        noiseLevel: parseInt(formData.noiseLevel),
+        installation: parseInt(formData.installation),
+        recommend: formData.recommend,
+        notes: formData.notes,
+        problems: formData.problems,
         name: formData.name || 'PSU Reviewer',
-        email: formData.email || 'reviewer@example.com',
-        phone: phone,
-        address: 'Not provided', // Required by backend
-        issueType: 'Review',      // Changed from 'Other' to 'Review'
-        priority: 'Medium',
-        description: description
+        email: formData.email || 'reviewer@example.com'
       };
 
-      const response = await api.submitComplaint(payload);
+      // Send to backend feedback endpoint
+      const response = await fetch(`${API_BASE_URL}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-      if (response && (response.success || response.status === 'success')) {
-        console.log('Review saved to MongoDB successfully:', response);
+      const data = await response.json();
+
+      if (response.ok || data.status === 'success') {
+        console.log('Feedback saved successfully:', data);
         setSubmitted(true);
         toast.success('Review submitted successfully!');
       } else {
-        const errorMsg = response.message || 'Unknown backend error';
-        console.error('Failed to save to MongoDB:', errorMsg);
-        toast.error('Backend error: ' + errorMsg);
-        // Do NOT show success screen if backend failed
+        const errorMsg = data.message || 'Unknown error';
+        console.error('Backend error:', errorMsg);
+        toast.error('Error: ' + errorMsg);
       }
     } catch (error) {
-      console.error('Error sending data to backend:', error);
+      console.error('Error submitting feedback:', error);
       toast.error('Failed to connect to server: ' + error.message);
-      // Do NOT show success screen if connection failed
     }
   };
 
@@ -300,56 +268,63 @@ Recommendation: ${formData.recommend}
           >
             <h2 style={{ fontSize: '1.5rem', color: colors.textPrimary, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
               <Zap size={24} color="#22c55e" />
-              Power Supply Info
+              Power Supply Details *
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-              {[{ label: 'Brand *', name: 'brand', type: 'text', placeholder: 'e.g., Corsair' }, { label: 'Model *', name: 'model', type: 'text', placeholder: 'e.g., RM850x' }].map((field) => (
-                <motion.div key={field.name} whileHover={{ y: -5 }}>
-                  <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>{field.label}</label>
-                  <input
-                    type={field.type}
-                    name={field.name}
-                    value={formData[field.name]}
-                    onChange={handleChange}
-                    required
-                    placeholder={field.placeholder}
-                    style={{
-                      width: '100%',
-                      background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)',
-                      border: `1px solid ${colors.borderColor}`,
-                      borderRadius: '0.75rem',
-                      padding: '0.75rem 1rem',
-                      color: colors.textPrimary,
-                      fontSize: '1rem',
-                      outline: 'none',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }}
-                    onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }}
-                  />
-                </motion.div>
-              ))}
-
+              {/* PSU Case */}
               <motion.div whileHover={{ y: -5 }}>
-                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Wattage *</label>
-                <select name="wattage" value={formData.wattage} onChange={handleChange} required style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease', cursor: 'pointer' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }}>
-                  <option value="">Select wattage</option>
-                  {['450W', '550W', '650W', '750W', '850W', '1000W', '1200W', '1600W'].map(w => <option key={w} value={w}>{w}</option>)}
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>PSU Case/Tower</label>
+                <input type="text" name="case" value={formData.case} onChange={handleChange} required placeholder="e.g., Corsair RM850x" style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }} />
+              </motion.div>
+
+              {/* PSU Model */}
+              <motion.div whileHover={{ y: -5 }}>
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Model Number</label>
+                <input type="text" name="psuModel" value={formData.psuModel} onChange={handleChange} required placeholder="e.g., RM850x Gold" style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }} />
+              </motion.div>
+
+              {/* PSU Placement */}
+              <motion.div whileHover={{ y: -5 }}>
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Placement in Case</label>
+                <select name="placement" value={formData.placement} onChange={handleChange} required style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease', cursor: 'pointer' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }}>
+                  <option value="horizontal">Horizontal</option>
+                  <option value="vertical">Vertical</option>
+                  <option value="inverted">Inverted</option>
                 </select>
               </motion.div>
 
+              {/* Fan Direction */}
               <motion.div whileHover={{ y: -5 }}>
-                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Efficiency *</label>
-                <select name="efficiency" value={formData.efficiency} onChange={handleChange} required style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease', cursor: 'pointer' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }}>
-                  <option value="">Select efficiency</option>
-                  {['80+ Bronze', '80+ Silver', '80+ Gold', '80+ Platinum', '80+ Titanium'].map(e => <option key={e} value={e}>{e}</option>)}
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Fan Direction</label>
+                <select name="fanDirection" value={formData.fanDirection} onChange={handleChange} style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease', cursor: 'pointer' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }}>
+                  <option value="intake">Intake</option>
+                  <option value="exhaust">Exhaust</option>
+                  <option value="mixed">Mixed</option>
                 </select>
+              </motion.div>
+
+              {/* Temperature */}
+              <motion.div whileHover={{ y: -5 }}>
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Temperature (°C) *</label>
+                <input type="number" name="temperature" value={formData.temperature} onChange={handleChange} required min="0" max="100" placeholder="e.g., 45" style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }} />
+              </motion.div>
+
+              {/* Noise Level */}
+              <motion.div whileHover={{ y: -5 }}>
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Noise Level (dB) *</label>
+                <input type="number" name="noiseLevel" value={formData.noiseLevel} onChange={handleChange} required min="0" max="100" placeholder="e.g., 35" style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }} />
+              </motion.div>
+
+              {/* Installation Rating */}
+              <motion.div whileHover={{ y: -5 }}>
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Installation Difficulty (1-5) *</label>
+                <input type="number" name="installation" value={formData.installation} onChange={handleChange} required min="1" max="5" placeholder="e.g., 2" style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }} />
               </motion.div>
             </div>
           </motion.div>
 
-          {/* Ratings Section */}
+          {/* Recommendations & Notes */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -365,48 +340,42 @@ Recommendation: ${formData.recommend}
           >
             <h2 style={{ fontSize: '1.5rem', color: colors.textPrimary, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
               <Star size={24} color="#fbbf24" />
-              Rate Your Experience
+              Feedback & Recommendations
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {[{ field: 'rating', label: 'Overall Rating' }, { field: 'performance', label: 'Performance' }, { field: 'noise', label: 'Noise Level' }, { field: 'value', label: 'Value for Money' }].map((item) => (
-                <motion.div key={item.field} whileHover={{ x: 5 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ color: colors.textSecondary, fontWeight: '500' }}>{item.label}</label>
-                  <RatingStars field={item.field} value={formData[item.field]} />
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Review Details */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            style={{
-              background: colors.cardBg,
-              border: `2px solid ${colors.borderColor}`,
-              borderRadius: '1.5rem',
-              padding: '2rem',
-              boxShadow: isDarkMode ? '0 8px 32px rgba(236, 72, 153, 0.2)' : '0 8px 32px rgba(236, 72, 153, 0.15)',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <h2 style={{ fontSize: '1.5rem', color: colors.textPrimary, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
-              <Award size={24} color="#22c55e" />
-              Review Details
-            </h2>
-
-            {[{ name: 'title', label: 'Review Title *', placeholder: 'Summarize your review', type: 'text' }, { name: 'review', label: 'Your Review *', placeholder: 'Share your detailed experience...', type: 'textarea' }, { name: 'pros', label: 'Pros', placeholder: 'What do you like?', type: 'textarea' }, { name: 'cons', label: 'Cons', placeholder: 'What could be improved?', type: 'textarea' }].map((field) => (
-              <motion.div key={field.name} whileHover={{ y: -5 }} style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>{field.label}</label>
-                {field.type === 'textarea' ? (
-                  <textarea name={field.name} value={formData[field.name]} onChange={handleChange} placeholder={field.placeholder} rows={field.name === 'review' ? 5 : 3} style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease', fontFamily: 'inherit', resize: 'vertical' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }} />
-                ) : (
-                  <input type={field.type} name={field.name} value={formData[field.name]} onChange={handleChange} placeholder={field.placeholder} required={field.label.includes('*')} style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }} />
-                )}
+              {/* Recommend */}
+              <motion.div whileHover={{ x: 5 }} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <input type="checkbox" name="recommend" checked={formData.recommend} onChange={() => setFormData(prev => ({ ...prev, recommend: !prev.recommend }))} style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#22c55e' }} />
+                <label style={{ color: colors.textSecondary, fontWeight: '500', cursor: 'pointer' }}>I would recommend this PSU</label>
               </motion.div>
-            ))}
+
+              {/* Issues/Problems */}
+              <motion.div whileHover={{ y: -5 }}>
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Issues Encountered (select multiple)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                  {['None', 'Coil Whine', 'Poor Build', 'Connector Issues', 'Cable Issues'].map((issue) => (
+                    <motion.div key={issue} whileHover={{ scale: 1.05 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.5rem', backgroundColor: formData.problems.includes(issue) ? 'rgba(34, 197, 94, 0.2)' : 'transparent', borderRadius: '0.5rem', transition: 'all 0.2s' }}>
+                        <input type="checkbox" checked={formData.problems.includes(issue)} onChange={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            problems: prev.problems.includes(issue) ? prev.problems.filter(p => p !== issue) : [...prev.problems, issue]
+                          }));
+                        }} style={{ cursor: 'pointer', accentColor: '#22c55e' }} />
+                        <span style={{ color: colors.textSecondary }}>{issue}</span>
+                      </label>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Notes */}
+              <motion.div whileHover={{ y: -5 }}>
+                <label style={{ display: 'block', color: colors.textSecondary, marginBottom: '0.5rem', fontWeight: '500' }}>Additional Notes</label>
+                <textarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Share any additional feedback or observations..." rows={4} style={{ width: '100%', background: isDarkMode ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)', border: `1px solid ${colors.borderColor}`, borderRadius: '0.75rem', padding: '0.75rem 1rem', color: colors.textPrimary, fontSize: '1rem', outline: 'none', transition: 'all 0.3s ease', fontFamily: 'inherit', resize: 'vertical' }} onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 20px rgba(34, 197, 94, 0.3)'; }} onBlur={(e) => { e.target.style.borderColor = colors.borderColor; e.target.style.boxShadow = 'none'; }} />
+              </motion.div>
+            </div>
           </motion.div>
 
           {/* Contact Information */}

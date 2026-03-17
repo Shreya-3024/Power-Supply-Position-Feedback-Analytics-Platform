@@ -1,6 +1,6 @@
 // Authentication utility with fallback to localStorage when backend is unavailable
-
-const API_URL = 'http://localhost:5000/api/auth';
+import { API_BASE_URL } from '../config';
+const API_URL = `${API_BASE_URL}/auth`;
 const USE_BACKEND = true; // Set to true when backend is running
 
 interface User {

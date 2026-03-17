@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Filter, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../config';
 
 const AdminDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
@@ -17,6 +18,22 @@ const AdminDashboard = () => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Verify authentication on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    console.log('[AdminDashboard] Auth check - Token:', !!token, 'User:', !!user);
+    
+    if (token && user) {
+      try {
+        const userData = JSON.parse(user);
+        console.log('[AdminDashboard] ✅ Authenticated as:', userData.email, 'Role:', userData.role);
+      } catch (e) {
+        console.error('[AdminDashboard] Error parsing user:', e);
+      }
+    }
+  }, []);
+
   // Fetch submissions
   useEffect(() => {
     fetchSubmissions();
@@ -25,20 +42,30 @@ const AdminDashboard = () => {
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/feedback?limit=100', {
+      const token = localStorage.getItem('token');
+      console.log('[AdminDashboard] Fetching submissions with token:', !!token);
+      
+      const response = await fetch(`${API_BASE_URL}/feedback?limit=100`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
-      if (!response.ok) throw new Error('Failed to fetch');
+      console.log('[AdminDashboard] Fetch response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch: ${response.statusText}`);
+      }
 
       const data = await response.json();
+      console.log('[AdminDashboard] Submissions loaded:', data.data?.length || 0);
+      
       setSubmissions(data.data || []);
       calculateStats(data.data || []);
     } catch (error) {
-      toast.error('Failed to load submissions');
-      console.error(error);
+      console.error('[AdminDashboard] Fetch error:', error);
+      toast.error(error.message || 'Failed to load submissions');
     } finally {
       setLoading(false);
     }
@@ -80,23 +107,40 @@ const AdminDashboard = () => {
     }
 
     try {
-      const ids = Array.from(selectedRows);
-      const response = await fetch('http://localhost:5000/api/feedback/bulk-update', {
+      // Get the actual submission IDs from filteredSubmissions using the indices
+      const submissionIds = Array.from(selectedRows)
+        .map(idx => filteredSubmissions[idx]._id)
+        .filter(id => id); // Filter out any undefined IDs
+      
+      console.log('[AdminDashboard] Bulk approve:', submissionIds);
+      
+      if (submissionIds.length === 0) {
+        toast.error('Invalid submissions selected');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/feedback/bulk/update`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ ids, status: 'approved' })
+        body: JSON.stringify({ ids: submissionIds, status: 'approved' })
       });
 
-      if (!response.ok) throw new Error('Failed to update');
+      const data = await response.json();
+      console.log('[AdminDashboard] Bulk approve response:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update');
+      }
 
-      toast.success(`${ids.length} submissions approved! ✅`);
+      toast.success(`${submissionIds.length} submissions approved! ✅`);
       setSelectedRows(new Set());
       fetchSubmissions();
     } catch (error) {
-      toast.error('Failed to approve submissions');
+      console.error('[AdminDashboard] Bulk approve error:', error);
+      toast.error(error.message || 'Failed to approve submissions');
     }
   };
 
@@ -325,13 +369,17 @@ const SubmissionDetailView = ({ submission, onClose, onUpdate }) => {
   const handleStatusUpdate = async (newStatus) => {
     try {
       setUpdating(true);
+      const token = localStorage.getItem('token');
+      
+      console.log('[AdminDashboard] Updating submission:', submission._id, 'to status:', newStatus);
+      
       const response = await fetch(
-        `http://localhost:5000/api/feedback/${submission._id}`,
+        `${API_BASE_URL}/feedback/${submission._id}`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             status: newStatus,
@@ -340,14 +388,20 @@ const SubmissionDetailView = ({ submission, onClose, onUpdate }) => {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to update');
+      const data = await response.json();
+      console.log('[AdminDashboard] Update response:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update');
+      }
 
       toast.success(`Submission ${newStatus}! ✅`);
       setStatus(newStatus);
       onUpdate();
       setTimeout(onClose, 1500);
     } catch (error) {
-      toast.error('Failed to update submission');
+      console.error('[AdminDashboard] Update error:', error);
+      toast.error(error.message || 'Failed to update submission');
     } finally {
       setUpdating(false);
     }

@@ -70,7 +70,6 @@ export function Navbar({ isDarkMode: externalIsDarkMode, onThemeToggle }) {
     { icon: Home, label: 'Home', path: '/welcome' },
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: FileText, label: 'Submit Review', path: '/submit-review' },
-    { icon: Search, label: 'Track Review', path: '/track-status' },
     { icon: FileText, label: 'Feedback', path: '/user/feedback' }
   ];
 

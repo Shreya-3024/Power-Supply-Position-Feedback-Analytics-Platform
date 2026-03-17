@@ -1,3 +1,4 @@
+console.log('STARTING SERVER...');
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -15,7 +16,7 @@ import monitoringRoutes from './routes/monitoringRoutes.js';
 import feedbackRoutes from './routes/feedbackRoutes.js';
 
 // Load environment variables
-dotenv.config({ path: './src/backend/.env' });
+dotenv.config();
 
 // Initialize Express app
 const app = express();
@@ -178,14 +179,13 @@ app.listen(PORT, () => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Rejection:', err);
-  // Close server & exit process
-  process.exit(1);
+  // process.exit(1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
-  process.exit(1);
+  // process.exit(1);
 });
 
 export default app;

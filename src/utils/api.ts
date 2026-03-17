@@ -1,5 +1,6 @@
 // API Service - Replace BASE_URL with your actual backend endpoint
-const BASE_URL = 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config';
+const BASE_URL = API_BASE_URL;
 
 // Mock data for development - Remove when connecting to real backend
 const mockComplaints = [

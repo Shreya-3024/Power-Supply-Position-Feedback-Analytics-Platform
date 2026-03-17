@@ -56,11 +56,11 @@ router.post('/', upload.array('photos', 3), async (req, res) => {
       problems: problemsStr
     } = req.body;
 
-    // Validation
-    if (!caseModel || !psuModel || !placement || !temperature || !noiseLevel || !installation) {
+    // Validation - check for required fields properly (0 is valid for numeric fields)
+    if (!caseModel || !psuModel || !placement || temperature === undefined || temperature === null || temperature === '' || noiseLevel === undefined || noiseLevel === null || noiseLevel === '' || installation === undefined || installation === null || installation === '') {
       return res.status(400).json({
         status: 'error',
-        message: 'Missing required fields'
+        message: 'Missing required fields: case, psuModel, placement, temperature, noiseLevel, and installation are required'
       });
     }
 
@@ -182,7 +182,7 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // PATCH - Update feedback status and admin notes
-router.patch('/:id', authenticate, async (req, res) => {
+router.patch('/:id', authenticate, authorize('admin'), async (req, res) => {
   try {
     const { status, adminNotes, rejectionReason } = req.body;
     const feedback = await Feedback.findById(req.params.id);
@@ -195,12 +195,12 @@ router.patch('/:id', authenticate, async (req, res) => {
     }
 
     if (status) {
-      feedback.status = status;
-      if (status === 'approved') {
+      feedback.status = status.toLowerCase(); // Ensure lowercase
+      if (status.toLowerCase() === 'approved') {
         feedback.approvedAt = new Date();
         feedback.verifiedBy = req.user._id;
       }
-      if (status === 'rejected' && rejectionReason) {
+      if (status.toLowerCase() === 'rejected' && rejectionReason) {
         feedback.rejectionReason = rejectionReason;
       }
     }
@@ -217,6 +217,7 @@ router.patch('/:id', authenticate, async (req, res) => {
       data: feedback
     });
   } catch (error) {
+    console.error('Update feedback error:', error);
     res.status(500).json({
       status: 'error',
       message: error.message
@@ -225,23 +226,23 @@ router.patch('/:id', authenticate, async (req, res) => {
 });
 
 // PATCH - Bulk update
-router.patch('/bulk/update', authenticate, async (req, res) => {
+router.patch('/bulk/update', authenticate, authorize('admin'), async (req, res) => {
   try {
     const { ids, status } = req.body;
 
     if (!Array.isArray(ids) || !status) {
       return res.status(400).json({
         status: 'error',
-        message: 'Missing required fields'
+        message: 'Missing required fields: ids array and status are required'
       });
     }
 
     const updateData = {
-      status,
+      status: status.toLowerCase(),
       updatedAt: new Date()
     };
 
-    if (status === 'approved') {
+    if (status.toLowerCase() === 'approved') {
       updateData.approvedAt = new Date();
       updateData.verifiedBy = req.user._id;
     }
@@ -257,6 +258,7 @@ router.patch('/bulk/update', authenticate, async (req, res) => {
       data: result
     });
   } catch (error) {
+    console.error('Bulk update error:', error);
     res.status(500).json({
       status: 'error',
       message: error.message

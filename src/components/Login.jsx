@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Lock, Zap, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 export function Login({ isDarkMode = true }) {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export function Login({ isDarkMode = true }) {
     setApiError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
