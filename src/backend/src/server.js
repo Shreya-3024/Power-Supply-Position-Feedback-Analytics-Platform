@@ -51,8 +51,8 @@ const corsOptions = {
       process.env.FRONTEND_URL,
     ];
 
-    // Allow CodeSandbox origins
-    if (!origin || origin.includes('codesandbox.io') || origin.includes('csb.app')) {
+    // Allow CodeSandbox and Render origins
+    if (!origin || origin.includes('codesandbox.io') || origin.includes('csb.app') || origin.includes('onrender.com')) {
       return callback(null, true);
     }
 
