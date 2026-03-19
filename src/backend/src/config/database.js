@@ -5,9 +5,15 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://mongodb:27017/power-supply-feedback';
+    
+    console.log('🔄 Connecting to MongoDB...');
+    
+    const conn = await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
@@ -19,7 +25,7 @@ const connectDB = async () => {
     });
 
     mongoose.connection.on('error', (err) => {
-      console.error('❌ Mongoose connection error:', err);
+      console.error('❌ Mongoose connection error:', err.message);
     });
 
     mongoose.connection.on('disconnected', () => {
@@ -36,7 +42,13 @@ const connectDB = async () => {
     return conn;
   } catch (error) {
     console.error('❌ Error connecting to MongoDB:', error.message);
-    process.exit(1);
+    console.warn('⚠️  Starting server anyway. Database features may be limited.');
+    
+    // Don't exit process - allow backend to start even if DB connection fails
+    // This helps with CodeSandbox compatibility
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
   }
 };
 

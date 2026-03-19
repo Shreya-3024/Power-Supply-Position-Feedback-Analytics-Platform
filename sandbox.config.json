@@ -1,0 +1,10 @@
+{
+  "infiniteLoopProtection": true,
+  "hardReloadOnWebSocketClose": true,
+  "view": "split",
+  "template": "node",
+  "container": {
+    "port": 5000,
+    "node": "20"
+  }
+}

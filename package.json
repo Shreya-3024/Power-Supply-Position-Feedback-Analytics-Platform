@@ -77,6 +77,11 @@
       },
       "scripts": {
             "dev": "vite",
-            "build": "vite build"
+            "build": "vite build",
+            "start": "node src/backend/src/server.js",
+            "backend": "cd src/backend && npm install && npm start",
+            "frontend": "npm install && vite",
+            "install-all": "npm install && cd src/backend && npm install && cd ../..",
+            "start:sandbox": "concurrently \"cd src/backend && npm install && npm start\" \"npm install && vite --host\""
       }
 }

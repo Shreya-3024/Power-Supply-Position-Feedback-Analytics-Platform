@@ -41,12 +41,39 @@ app.use(helmet({
 }));
 
 // CORS configuration
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:3001', process.env.FRONTEND_URL],
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:3001',
+      'http://localhost:5001',
+      process.env.FRONTEND_URL,
+    ];
+
+    // Allow CodeSandbox origins
+    if (!origin || origin.includes('codesandbox.io') || origin.includes('csb.app')) {
+      return callback(null, true);
+    }
+
+    // Allow explicitly listed origins
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // For development/sandbox mode, allow all
+    if (process.env.SANDBOX_MODE === 'true' || process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -163,7 +190,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
   console.log('\n' + '='.repeat(50));

@@ -1,5 +1,20 @@
-// API Service - Replace BASE_URL with your actual backend endpoint
-const BASE_URL = 'http://localhost:5001/api';
+// API Service - Dynamic BASE_URL for local and CodeSandbox environments
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // For CodeSandbox environment
+    if (hostname.includes('codesandbox.io') || hostname.includes('csb.app')) {
+      const protocol = window.location.protocol;
+      const port = '5001';
+      const baseHost = hostname.split('-')[0]; // Get the base sandbox ID
+      return `${protocol}//${baseHost}-${port}.codesandbox.io/api`;
+    }
+  }
+  // Default to localhost
+  return 'http://localhost:5001/api';
+};
+
+const BASE_URL = getBaseUrl();
 
 // API functions
 export const api = {
