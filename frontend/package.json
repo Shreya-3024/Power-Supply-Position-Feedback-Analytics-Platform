@@ -1,7 +1,8 @@
 {
-      "name": "Power Supply Feedback System",
+      "name": "Power Supply Feedback System Frontend",
       "version": "0.1.0",
       "private": true,
+      "type": "module",
       "dependencies": {
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -31,28 +32,14 @@
             "@radix-ui/react-tooltip": "^1.1.8",
             "@tailwindcss/postcss": "^4.1.18",
             "@vitejs/plugin-react": "*",
-            "bcryptjs": "*",
             "class-variance-authority": "^0.7.1",
             "clsx": "*",
             "cmdk": "^1.1.1",
-            "compression": "*",
-            "cors": "*",
-            "dotenv": "*",
             "embla-carousel-react": "^8.6.0",
-            "express": "*",
-            "express-rate-limit": "*",
-            "express-validator": "*",
-            "fs": "*",
-            "helmet": "*",
             "input-otp": "^1.4.2",
-            "jsonwebtoken": "*",
             "lucide-react": "^0.487.0",
-            "mongoose": "*",
-            "morgan": "*",
             "motion": "*",
             "next-themes": "^0.4.6",
-            "nodemailer": "*",
-            "path": "*",
             "react": "^18.3.1",
             "react-day-picker": "^8.10.1",
             "react-dom": "^18.3.1",
@@ -60,10 +47,8 @@
             "react-resizable-panels": "^2.1.7",
             "react-router-dom": "*",
             "recharts": "^2.15.4",
-            "socket.io": "*",
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
-            "url": "*",
             "vaul": "^1.1.2",
             "vite": "*"
       },
@@ -78,10 +63,6 @@
       "scripts": {
             "dev": "vite",
             "build": "vite build",
-            "start": "node src/backend/src/server.js",
-            "backend": "cd src/backend && npm install && npm start",
-            "frontend": "npm install && vite",
-            "install-all": "npm install && cd src/backend && npm install && cd ../..",
-            "start:sandbox": "concurrently \"cd src/backend && npm install && npm start\" \"npm install && vite --host\""
+            "preview": "vite preview"
       }
 }

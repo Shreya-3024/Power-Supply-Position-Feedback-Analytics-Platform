@@ -1,27 +1,11 @@
-// API Service - Dynamic BASE_URL for local, CodeSandbox, and Render environments
+// API Service - Dynamic BASE_URL for local and production environments
 const getBaseUrl = () => {
-  // 1. Use VITE env variable if set (production builds on Render)
+  // 1. Use VITE env variable if set (Recommended for production)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
 
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-
-    // 2. CodeSandbox environment
-    if (hostname.includes('codesandbox.io') || hostname.includes('csb.app')) {
-      const protocol = window.location.protocol;
-      const baseHost = hostname.split('-')[0];
-      return `${protocol}//${baseHost}-5001.codesandbox.io/api`;
-    }
-
-    // 3. Render deployment
-    if (hostname.includes('onrender.com')) {
-      return `https://power-supply-backend.onrender.com/api`;
-    }
-  }
-
-  // 4. Default: local development
+  // 2. Default: local development
   return 'http://localhost:5001/api';
 };
 
