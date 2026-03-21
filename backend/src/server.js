@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import connectDB from './config/database.js';
+import { initAdminUser } from './scripts/initAdmin.js';
 
 // Import routes
 import apiRoutes from './routes/api.js';
@@ -22,7 +23,10 @@ dotenv.config();
 const app = express();
 
 // Connect to MongoDB
-connectDB();
+connectDB().then(() => {
+  // Initialize admin user
+  initAdminUser();
+});
 
 // Trust proxy (for rate limiting behind reverse proxy)
 app.set('trust proxy', 1);
