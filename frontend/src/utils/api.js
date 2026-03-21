@@ -1,15 +1,6 @@
-// API Service - Dynamic BASE_URL for local and production environments
-const getBaseUrl = () => {
-  // 1. Use VITE env variable if set (Recommended for production)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
+import { API_BASE_URL } from '../config';
 
-  // 2. Default: local development
-  return 'http://localhost:5001/api';
-};
-
-const BASE_URL = getBaseUrl();
+const BASE_URL = API_BASE_URL;
 
 // API functions
 export const api = {

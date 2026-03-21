@@ -76,7 +76,7 @@ export function Login({ isDarkMode = true }) {
         setApiError(data.message || 'Login failed. Please try again.');
       }
     } catch (error) {
-      setApiError('Unable to connect to server. Please try again later.');
+      setApiError(`Connection Error: ${error.message}. Ensure backend is awake and VITE_API_URL is correct.`);
       console.error('Login error:', error);
     } finally {
       setIsLoading(false);

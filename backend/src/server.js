@@ -51,8 +51,8 @@ const corsOptions = {
       process.env.FRONTEND_URL,
     ];
 
-    // Allow CodeSandbox and Render origins
-    if (!origin || origin.includes('codesandbox.io') || origin.includes('csb.app') || origin.includes('onrender.com')) {
+    // Allow CodeSandbox, Render, and Vercel origins
+    if (!origin || origin.includes('codesandbox.io') || origin.includes('csb.app') || origin.includes('onrender.com') || origin.includes('vercel.app')) {
       return callback(null, true);
     }
 
